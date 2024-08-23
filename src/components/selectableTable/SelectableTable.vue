@@ -1,0 +1,291 @@
+<template>
+	<v-data-table
+		v-model:sortBy="modelSortBy"
+		:items="modelItems"
+		:headers="headers"
+		density="compact"
+		class="h-full"
+		:height="100"
+		:items-length="modelItems.length"
+		@click.exact="handleTableClick"
+		@dragleave="handleTableDragLeave"
+		@dragover="handleTableDragOver"
+		@drop="handleTableDrop"
+	>
+		<template #top>
+			<slot name="toolbar"></slot>
+		</template>
+
+		<!-- Disable bottom pagination -->
+		<template #bottom></template>
+
+		<!-- No mods warning -->
+		<template #no-data>
+			<slot name="no-data"></slot>
+			<!-- <v-icon icon="mdi-folder-alert-outline" size="x-large" /> <br />
+			There are no mods in this instance. <br />
+			Create a new one or import one! -->
+		</template>
+
+		<template #item="{ item, index }">
+			<tr
+				draggable="true"
+				:class="[
+					'cursor-pointer',
+					'border-b',
+					'border-b-gray-50',
+					...dynamicRowClasses(item, index)
+				]"
+				:data-index="index"
+				@dragstart="e => handleDragStart(e, index, item)"
+				@dragenter="e => handleDragEnter(e, index)"
+				@dragleave="e => handleDragLeave(e, index)"
+				@dragover="e => handleDragOver(e, index)"
+				@drop="e => handleDrop(e, index)"
+				@click.exact="e => handleRowClick(e, item, index)"
+				@click.ctrl="selectItem(item, { add: true })"
+				@click.shift="selectTo(item)"
+				@dblclick="e => handleRowDoubleClick(e, item, index)"
+			>
+				<td v-for="h in props.headers" :key="h.value">
+					<slot :name="`column-${h.value}`" :item="item" :index="index">{{ item[h.value] }}</slot>
+				</td>
+			</tr>
+		</template>
+	</v-data-table>
+</template>
+
+<script setup lang="ts">
+import { ref, defineEmits } from 'vue';
+// import { VDataTableHeaders } from 'vuetify/lib/components/VDataTable/index.mjs';
+
+interface HeaderType {
+	title: string;
+	value: string;
+	sortable?: boolean;
+	sortBy?: string;
+}
+
+const modelItems = defineModel<any[]>({
+	required: true
+});
+const modelSortBy = defineModel<any[]>('sortBy');
+
+const props = defineProps({
+	headers: {
+		type: undefined as unknown as PropType<HeaderType[]>,
+		required: true
+	},
+	itemKey: {
+		type: String,
+		required: true
+	},
+	// operationalKey: {
+	// 	type: String,
+	// 	required: true
+	// },
+	allowDragging: {
+		type: Boolean,
+		default: true
+	},
+	checkered: {
+		type: Boolean,
+		default: true
+	},
+	colorClass: {
+		type: String,
+		default: 'blue'
+	}
+});
+
+const emits = defineEmits({
+	onDragged: (draggingIndexes: number[], droppedAtIndex: number) => true,
+	onDoubleClick: (item: any, index: number) => true,
+})
+
+const transformedItemsSortBy = computed(() => {
+	const sortBy = modelSortBy.value;
+	if (sortBy === undefined || sortBy.length === 0) return modelItems.value;
+
+	const sortKey = sortBy[0].key
+	const sortOrder = sortBy[0].order
+	const sortedItems = [...modelItems.value]
+		.sort((a, b) => {
+			const aValue = a[sortKey]
+			const bValue = b[sortKey]
+			return sortOrder === 'desc' ? bValue - aValue : aValue - bValue
+		})
+
+	return sortedItems;
+})
+
+function getTransformedItemIndex(key: any) {
+	return transformedItemsSortBy.value.findIndex(i => itemKey(i) === key);
+}
+
+const itemKey = (item: any) => {
+	if (typeof item === 'undefined') return undefined;
+	return item[props.itemKey];
+};
+
+const selectedItems = ref<string[]>([]);
+const lastSelectedItemKey = ref<string | null>(null);
+
+function selectItem(item: any, opts: {forced?: boolean; add?: boolean} = { forced: false, add: false }) {
+	const key = itemKey(item);
+
+	lastSelectedItemKey.value = key;
+	
+	if (typeof key === 'undefined') {
+		console.error('Select item "key" is undefined');
+		return;
+	}
+
+	if (opts.add) {
+		if (selectedItems.value.includes(key)) {
+			if (opts.forced) return;
+			selectedItems.value = selectedItems.value.filter(si => si !== key);
+		} else {
+			selectedItems.value.push(key);
+		}
+	} else {
+		if (selectedItems.value.length > 1) {
+			selectedItems.value = [key];
+		} else if (selectedItems.value.includes(key)) {
+			if (opts.forced) return;
+			selectedItems.value = [];
+		} else {
+			selectedItems.value = [key];
+		}
+	}
+}
+
+function selectTo(item: any) {
+	const selectToKey = itemKey(item);
+
+	// console.log(`Select ${lastSelectedItemKey.value} -> ${selectToKey}`)
+
+	if (lastSelectedItemKey.value === null) {
+		selectItem(item);
+		return;
+	}
+
+	const indexA = getTransformedItemIndex(selectToKey);
+	const indexB = getTransformedItemIndex(lastSelectedItemKey.value);
+
+	const fromIndex = Math.min(indexA, indexB);
+	const toIndex = Math.max(indexA, indexB);
+
+	for (let i = fromIndex; i <= toIndex; i++) {
+		selectItem(transformedItemsSortBy.value[i], {
+			add: true,
+			forced: true
+		});
+	}
+
+	lastSelectedItemKey.value = selectToKey;
+}
+
+function dynamicRowClasses(item: any, index: number) {
+	const classes = [];
+
+	if (hoveringIndex.value === index) {
+		classes.push(`bg-${props.colorClass}-lighten-2`);
+	}
+
+	if (props.checkered && index % 2) classes.push('bg-zinc-900');
+
+	if (selectedItems.value.includes(itemKey(item))) {
+		if (props.checkered && index % 2) classes.push(`bg-${props.colorClass}-darken-2`);
+		else classes.push(`bg-${props.colorClass}`);
+	}
+
+	return classes;
+}
+
+
+const draggingIndex = ref<number | null>(null);
+const hoveringIndex = ref<number | null>(null);
+
+// const isOrderedByOperationalKey = computed(() => {
+// 	if (!modelSortBy.value || !modelSortBy.value.length) return true;
+	
+// 	return modelSortBy.value[0].key === props.operationalKey;
+// })
+
+const canDrag = computed(() => {
+	// return props.allowDragging && isOrderedByOperationalKey.value;
+	return props.allowDragging;
+})
+
+function handleTableClick() {
+	selectedItems.value = [];
+	lastSelectedItemKey.value = null;
+}
+
+function handleRowClick(e: MouseEvent, item: any, index: number) {
+	e.stopPropagation();
+	// selectedItems.value = [itemKey(item)]
+	selectItem(item);
+}
+
+function handleRowDoubleClick(event: MouseEvent, item: any, index: number) {
+	emits('onDoubleClick', item, index);
+}
+
+function handleTableDragLeave(e: DragEvent) {
+	// console.log('event handleTableDragLeave', e);
+	// draggingIndex.value = null;
+	// hoveringIndex.value = null;
+}
+
+function handleTableDragOver(e: DragEvent) {
+	// console.log('event handleTableDragOver', e);
+}
+
+function handleTableDrop(e: DragEvent) {
+	// console.log('event handleTableDrop', e);
+}
+
+function handleDragStart(e: DragEvent, index: number, item: { name: string }) {
+	if (!canDrag.value) return;
+	e.dataTransfer?.setData('text/plain', item.name);
+	// Forcibly select item
+	selectItem(item, {
+		forced: true,
+		add: e.ctrlKey
+	});
+	draggingIndex.value = index;
+}
+
+function handleDragEnter(e: DragEvent, index: number) {
+	hoveringIndex.value = index;
+}
+
+function handleDragLeave(e: DragEvent, index: number) {
+	// hoveringIndex.value = null;
+	// draggingIndex.value = null;
+}
+
+function handleDragOver(e: DragEvent, index: number) {
+	if (!canDrag.value) return;
+	e.preventDefault(); // Necessary. Allows us to drop.
+}
+
+async function handleDrop(e: DragEvent, droppedAtIndex: number) {
+	if (!canDrag.value) return;
+	e.preventDefault();
+
+	if (draggingIndex.value !== null) {
+		const draggingIndexes = selectedItems.value.map(selectedItemKey =>
+			modelItems.value.findIndex(item => {
+				return itemKey(item) === selectedItemKey;
+			})
+		);
+		emits('onDragged', draggingIndexes, droppedAtIndex);
+	}
+
+	hoveringIndex.value = null;
+	draggingIndex.value = null;
+}
+</script>

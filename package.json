@@ -1,0 +1,61 @@
+{
+	"name": "tauri-vue-template",
+	"private": true,
+	"version": "0.3.0",
+	"scripts": {
+		"dev": "WEBKIT_DISABLE_COMPOSITING_MODE=1 RUST_BACKTRACE=full concurrently -k \"tauri dev\" \"bun run vue-devtools\"",
+		"tauri": "tauri",
+		"build": "tauri build",
+		"vite:dev": "vite dev",
+		"vite:build": "vite build",
+		"test": "vitest",
+		"devtools": "bun run vue-devtools",
+		"ts-check": "vue-tsc --noEmit",
+		"preview": "vite preview",
+		"check": "cd src-tauri && cargo check",
+		"lint": "eslint src --ext ts,tsx,cjs,js,jsx,vue",
+		"lint:fix": "eslint src --fix --quiet --ext ts,tsx,js,jsx,vue,cjs",
+		"prettify": "prettier src/**/**.{json,ts,tsx,js,css,scss,html,vue,cjs} --write"
+	},
+	"dependencies": {
+		"@tauri-apps/api": "1.4.0",
+		"fast-xml-parser": "^4.4.0",
+		"fomod": "git@github.com:NeilSeligmann/fomod-js.git",
+		"pinia": "^2.1.7",
+		"taurpc": "^1.4.4",
+		"vite-plugin-vuetify": "^1.0.2",
+		"vue": "3.4.35",
+		"vuetify": "^3.6.14"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "1.7.3",
+		"@mdi/font": "^7.3.67",
+		"@tauri-apps/cli": "^1.5.13",
+		"@types/node": "20.4.1",
+		"@vitejs/plugin-vue": "4.5.1",
+		"@vue/devtools": "6.6.3",
+		"@vue/eslint-config-typescript": "11.0.3",
+		"autoprefixer": "10.4.19",
+		"concurrently": "8.2.0",
+		"postcss": "8.4.38",
+		"postcss-import": "15.1.0",
+		"postcss-nesting": "12.0.0",
+		"rollup-plugin-visualizer": "^5.10.0",
+		"sass": "^1.69.5",
+		"tailwindcss": "3.4.3",
+		"typescript": "5.1.6",
+		"unplugin-auto-import": "0.17.2",
+		"unplugin-vue-router": "^0.8.8",
+		"vite": "4.4.2",
+		"vitest": "^1.6.0",
+		"vue-router": "^4.3.2",
+		"vue-tsc": "1.8.4"
+	},
+	"lint-staged": {
+		"*.{js,jsx,ts,tsx,vue}": ["eslint --fix --quiet"],
+		"*.{css,scss,json,md,html,js,jsx,ts,tsx,vue}": ["prettier --write"]
+	},
+	"volta": {
+		"node": "20.11.0"
+	}
+}

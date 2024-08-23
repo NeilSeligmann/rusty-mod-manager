@@ -1,0 +1,14 @@
+# Ignore everything recursively
+*
+
+!*.ts
+!*.tsx
+!*.js
+!*.jsx
+!*.cjs
+!*.css
+!*.vue
+!*.json
+
+# Check subdirectories too
+!*/
