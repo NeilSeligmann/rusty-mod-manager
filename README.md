@@ -9,6 +9,9 @@ Made using [Rust](https://www.rust-lang.org/) and [Tauri](https://tauri.app/).
 > Features and functionaliy might change. Updates will most probably contain breaking changes.
 
 
+![Mods Window](/readme/Window-Mods.png)
+
+
 ## Features
 - Made for Linux
 - Fast 🚀
@@ -39,6 +42,7 @@ Made using [Rust](https://www.rust-lang.org/) and [Tauri](https://tauri.app/).
 - Run executable directly by specifying an argument
 - Steam Games Auto-detection
 - Automatic load-order using LOOT
+- Add tests
 
 ## Supported Games
 Currently, the mod manager is being developed with Bethesda games (Skyrim specially) in mind. There are plans for supporting more games in the future!
