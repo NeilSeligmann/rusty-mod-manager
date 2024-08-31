@@ -251,8 +251,8 @@ impl ApiInstances for ApiInstancesStateImpl {
 		// Set selected instance path
 		state.selected_instance_path = Some(path);
 
-		// Update state
-		state.trigger_on_state_changed()?;
+		// Save / update state
+		state.save()?;
 
 		return Ok(state.selected_instance.clone().unwrap());
 	}
@@ -262,8 +262,8 @@ impl ApiInstances for ApiInstancesStateImpl {
 		state.selected_instance = None;
 		state.selected_instance_path = None;
 
-		// Update state
-		state.trigger_on_state_changed()?;
+		// Save / update state
+		state.save()?;
 
 		return Ok(());
 	}
