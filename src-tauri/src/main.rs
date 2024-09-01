@@ -634,6 +634,7 @@ impl ApiDownloads for ApiDownloadsStateImpl {
 	async fn download_urls(self, urls: Vec<String>) -> Result<(), String> {
 		let mut state = self.state.lock().await;
 
+		// Process URLs into downloads
 		let mut downloads_to_add: Vec<Download> = Vec::new();
 		for url in urls {
 			let mut parsed_download = Download {
@@ -699,6 +700,7 @@ impl ApiDownloads for ApiDownloadsStateImpl {
 			println!("Download added: {}", parsed_download.url);
 		}
 
+		// Get selected instance
 		let selected_instance = state.selected_instance.as_mut().unwrap();
 
 		// Add downloads to instance
@@ -724,6 +726,10 @@ impl ApiDownloads for ApiDownloadsStateImpl {
 			.selected_instance_or_fail()
 			.start_downloads(self.state.clone())
 			.await?;
+
+		// Notify state changed
+		// This is in order for the downloads to appear in the downloads list
+		state.trigger_on_state_changed()?;
 
 		// return response;
 		return Ok(());

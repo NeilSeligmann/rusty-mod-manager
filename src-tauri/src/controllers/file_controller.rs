@@ -448,13 +448,19 @@ pub fn move_file(source: PathBuf, destination: PathBuf) -> std::io::Result<()> {
 pub fn get_files_in_folder_with_extensions(path: PathBuf, extensions: Vec<&str>) -> Vec<PathBuf> {
 	let mut files: Vec<PathBuf> = Vec::new();
 
-	// println!(
-	// 	"Getting files ({}) in folder: {}",
-	// 	extensions.join(", "),
-	// 	path.display()
-	// );
+	let directory = match std::fs::read_dir(path.clone()) {
+		Ok(entry) => entry,
+		Err(err) => {
+			println!(
+				"Failed to read directory: \"{}\" -> {}",
+				path.display(),
+				err
+			);
+			return files;
+		}
+	};
 
-	for entry in std::fs::read_dir(path).unwrap() {
+	for entry in directory {
 		let entry = entry.unwrap();
 		let entry_path = entry.path();
 		if entry_path.is_file()
