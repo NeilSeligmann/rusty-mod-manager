@@ -39,6 +39,7 @@
 						></v-list-item>
 					</v-list>
 				</v-alert>
+
 				<selectable-table
 					v-model="items"
 					operational-key="loadOrder"
@@ -46,6 +47,7 @@
 					v-model:sort-by="sortBy"
 					item-key="name"
 					:allow-dragging="sortBy.length === 0 || (sortBy[0].key === 'loadOrder' && sortBy[0].order === 'asc')"
+					:context-menu="tableContextMenu"
 					@on-dragged="onDragged"
 					@on-double-click="onDoubleClick">
 					<!-- No data -->
@@ -100,6 +102,7 @@ import { taurpc } from '@/lib/taurpc';
 import { useApplicationStateStore } from '@/stores/ApplicationStateStore';
 import router from '@/plugins/router';
 import SelectableTable from '@/components/selectableTable/SelectableTable.vue';
+import type { IContextMenu } from '@/components/selectableTable/SelectableTable.vue';
 import ExecutableIcon from '@/components/display/ExecutableIcon.vue';
 import ModVersion from '@/installer/components/ModVersion.vue';
 
@@ -217,6 +220,27 @@ const isStaticMod = (mod: InstanceMod) => {
 async function updateEnabled(mod: InstanceMod, value: boolean) {
 	await taurpc.instances.set_mod_enabled(mod.name, value);
 }
+
+const tableContextMenu = computed((): IContextMenu => {
+	return {
+		items: [
+			{
+				label: 'Open Folder',
+				icon: 'mdi mdi-folder-open-outline',
+				onClick: (item: InstanceMod) => {
+					openModFolder(item.name)
+				},
+			},
+			// {
+			// 	label: 'Delete Mod',
+			// 	icon: 'mdi mdi-delete-outline',
+			// 	onClick: (item: InstanceMod) => {
+			// 		console.log('deleteMod', item.name);
+			// 	},
+			// },
+		]
+	}
+})
 </script>
 
 <style scoped></style>

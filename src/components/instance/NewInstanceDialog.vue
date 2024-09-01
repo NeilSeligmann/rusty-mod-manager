@@ -87,6 +87,8 @@ import FolderInput from '@/components/inputs/FolderInput.vue';
 import type { GameInstancePaths } from '../../lib/bindings';
 import { taurpc } from '@/lib/taurpc';
 import router from '@/plugins/router';
+import { useApplicationStateStore } from '@/stores/ApplicationStateStore';
+const store = useApplicationStateStore();
 
 export interface NewInstanceData {
 	name: string;
@@ -128,6 +130,7 @@ async function createInstance() {
 	tempPaths.root = finalInstancePath();
 
 	const newInstance = await taurpc.instances.create_simple(instanceData.value.name, tempPaths);
+	// await store.fetchBackendState();
 	router.push({ path: '/instances' });
 }
 </script>

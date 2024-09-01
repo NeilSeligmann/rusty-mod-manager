@@ -975,6 +975,10 @@ impl GameInstance {
 		let executable_absolute_path = self.parse_path_variables(executable_relative_path.clone());
 
 		if !file_controller::file_exists(&executable_absolute_path) {
+			eprintln!(
+				"Executable not found: {}",
+				executable_absolute_path.display()
+			);
 			return None;
 		}
 

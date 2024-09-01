@@ -6,6 +6,7 @@
 		density="compact"
 		class="h-full"
 		:height="100"
+		:items-per-page="999999"
 		:items-length="modelItems.length"
 		@click.exact="handleTableClick"
 		@dragleave="handleTableDragLeave"
@@ -24,7 +25,7 @@
 			<slot name="no-data"></slot>
 			<!-- <v-icon icon="mdi-folder-alert-outline" size="x-large" /> <br />
 			There are no mods in this instance. <br />
-			Create a new one or import one! -->
+				Create a new one or import one! -->
 		</template>
 
 		<template #item="{ item, index }">
@@ -46,9 +47,15 @@
 				@click.ctrl="selectItem(item, { add: true })"
 				@click.shift="selectTo(item)"
 				@dblclick="e => handleRowDoubleClick(e, item, index)"
+				@click.right="e => handleRowRightClick(e, item, index)"	
 			>
 				<td v-for="h in props.headers" :key="h.value">
-					<slot :name="`column-${h.value}`" :item="item" :index="index">{{ item[h.value] }}</slot>
+					<slot
+						:name="`column-${h.value}`"
+						:item="item"
+						:index="index">
+						{{ item[h.value] }}
+					</slot>
 				</td>
 			</tr>
 		</template>
@@ -56,14 +63,25 @@
 </template>
 
 <script setup lang="ts">
+import ContextMenu from '@imengyu/vue3-context-menu';
+import type { MenuItem } from '@imengyu/vue3-context-menu';
 import { ref, defineEmits } from 'vue';
-// import { VDataTableHeaders } from 'vuetify/lib/components/VDataTable/index.mjs';
 
-interface HeaderType {
+export interface HeaderType {
 	title: string;
 	value: string;
 	sortable?: boolean;
 	sortBy?: string;
+}
+
+export interface IContextMenu {
+	items: IContextMenuItem[]
+}
+
+export interface IContextMenuItem {
+	icon: string,
+	label: string,
+	onClick: (item: any) => void | Promise<void>
 }
 
 const modelItems = defineModel<any[]>({
@@ -95,6 +113,10 @@ const props = defineProps({
 	colorClass: {
 		type: String,
 		default: 'blue'
+	},
+	contextMenu: {
+		type: undefined as unknown as PropType<undefined | IContextMenu>,
+		default: undefined
 	}
 });
 
@@ -203,15 +225,8 @@ function dynamicRowClasses(item: any, index: number) {
 	return classes;
 }
 
-
 const draggingIndex = ref<number | null>(null);
 const hoveringIndex = ref<number | null>(null);
-
-// const isOrderedByOperationalKey = computed(() => {
-// 	if (!modelSortBy.value || !modelSortBy.value.length) return true;
-	
-// 	return modelSortBy.value[0].key === props.operationalKey;
-// })
 
 const canDrag = computed(() => {
 	// return props.allowDragging && isOrderedByOperationalKey.value;
@@ -233,28 +248,53 @@ function handleRowDoubleClick(event: MouseEvent, item: any, index: number) {
 	emits('onDoubleClick', item, index);
 }
 
+function handleRowRightClick(e: MouseEvent, item: any, index: number) {
+	e.preventDefault();
+
+	selectItem(item, {
+		forced: true,
+		add: e.ctrlKey
+	});
+
+	if (typeof props.contextMenu === 'undefined') return;
+	if (props.contextMenu.items.length < 1) return;
+
+	const contextMenuItems: MenuItem[] = [];
+	for (const contextMenuItem of props.contextMenu.items) {
+		contextMenuItems.push({
+			icon: contextMenuItem.icon,
+			label: contextMenuItem.label,
+			onClick: () => contextMenuItem.onClick(item)
+		});
+	}
+
+	ContextMenu.showContextMenu({
+		x: e.x,
+		y: e.y,
+		theme: 'flat dark',
+		items: contextMenuItems
+	});
+}
+
 function handleTableDragLeave(e: DragEvent) {
-	// console.log('event handleTableDragLeave', e);
-	// draggingIndex.value = null;
-	// hoveringIndex.value = null;
 }
 
 function handleTableDragOver(e: DragEvent) {
-	// console.log('event handleTableDragOver', e);
 }
 
 function handleTableDrop(e: DragEvent) {
-	// console.log('event handleTableDrop', e);
 }
 
 function handleDragStart(e: DragEvent, index: number, item: { name: string }) {
 	if (!canDrag.value) return;
 	e.dataTransfer?.setData('text/plain', item.name);
+
 	// Forcibly select item
 	selectItem(item, {
 		forced: true,
 		add: e.ctrlKey
 	});
+
 	draggingIndex.value = index;
 }
 
@@ -263,13 +303,11 @@ function handleDragEnter(e: DragEvent, index: number) {
 }
 
 function handleDragLeave(e: DragEvent, index: number) {
-	// hoveringIndex.value = null;
-	// draggingIndex.value = null;
 }
 
 function handleDragOver(e: DragEvent, index: number) {
 	if (!canDrag.value) return;
-	e.preventDefault(); // Necessary. Allows us to drop.
+	e.preventDefault(); // Necessary, allows us to drop
 }
 
 async function handleDrop(e: DragEvent, droppedAtIndex: number) {

@@ -18,6 +18,7 @@
 		"prettify": "prettier src/**/**.{json,ts,tsx,js,css,scss,html,vue,cjs} --write"
 	},
 	"dependencies": {
+		"@imengyu/vue3-context-menu": "^1.4.2",
 		"@tauri-apps/api": "1.4.0",
 		"fast-xml-parser": "^4.4.0",
 		"fomod": "git@github.com:NeilSeligmann/fomod-js.git",
