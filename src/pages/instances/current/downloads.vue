@@ -1,17 +1,15 @@
 <template>
 	<div class="h-full">
-		<v-data-table
-			:items="items"
+		<SelectableTable
+			v-model:sort-by="sortBy"
+			:model-value="items"
 			:headers="headers"
-			density="compact"
-			class="h-full"
-			:height="100"
-			:search="searchText"
-			:items-per-page="10000"
-			:sort-by="[{ key: 'addedAt', order: 'desc' }]"
-			@dblclick:row="handleRowDoubleClick"
+			item-key="name"
+			:allow-dragging="false"
+			:context-menu="tableContextMenu"
 		>
-			<template #top>
+			<!-- Toolbar -->
+			<template #toolbar>
 				<v-toolbar flat color="orange-darken-3">
 					<!-- Title -->
 					<v-toolbar-title>Downloads</v-toolbar-title>
@@ -53,18 +51,15 @@
 				</v-toolbar>
 			</template>
 
-			<!-- Disable bottom pagination -->
-			<template #bottom></template>
-
 			<!-- No mods warning -->
 			<template #no-data>
 				<v-icon icon="mdi-dow" size="x-large" /> <br />
 				Your downloads are empty.<br />
 				Go download something!
 			</template>
-			
+
 			<!-- Column - Progress -->
-			<template v-slot:item.progress="{ item }">
+			<template #column-progress="{ item }">
 				<v-progress-linear
 					height="20"
 					:color="item.progress === 1 ? 'success' : 'primary'"
@@ -76,26 +71,26 @@
 			</template>
 
 			<!-- Column - Size -->
-			<template v-slot:item.size="{ item }">
+			<template #column-size="{ item }">
 				{{ formatBytes(item.size) }}
 			</template>
 
 			<!-- Column - Mod Id -->
-			<template v-slot:item.modId="{ item }">
-				{{ item?.modId || 'N/A' }}
+			<template #column-modId="{ item }">
+				{{ item?.modId || '' }}
 			</template>
 
 			<!-- Column - Added At -->
-			<template v-slot:item.addedAt="{ item }">
+			<template #column-addedAt="{ item }">
 				<DateDisplay :timestamp="item.addedAt!" />
 			</template>
 
 			<!-- Column - Completed At -->
-			<template v-slot:item.completedAt="{ item }">
-				<DateDisplay :timestamp="item.completedAt!" />
+			<template #column-completedAt="{ item }">
+				<DateDisplay v-if="item.completedAt" :timestamp="item.completedAt!" />
 			</template>
-		</v-data-table>
-	
+		</SelectableTable>
+
 		<v-dialog
 			v-model="addDownloadDialog"
 			max-width="600">
@@ -136,6 +131,11 @@ import { definePage } from 'vue-router/auto';
 import { taurpc } from '@/lib/taurpc';
 import type { Download, DownloadStatus } from '@/lib/bindings';
 import DateDisplay from '@/components/display/DateDisplay.vue';
+import SelectableTable from '@/components/selectableTable/SelectableTable.vue';
+import type { IContextMenu } from '@/components/selectableTable/SelectableTable.vue';
+
+// @ts-expect-error
+import type { SortItem } from 'vuetify/lib/components/VDataIterator/index.mjs';
 
 import { useApplicationStateStore } from '@/stores/ApplicationStateStore';
 const store = useApplicationStateStore();
@@ -145,6 +145,8 @@ definePage({
 		title: 'Downloads'
 	}
 });
+
+const sortBy: Ref<SortItem> = ref([{ key: 'addedAt', order: 'desc' }]);
 
 const searchText = ref('');
 
@@ -185,7 +187,8 @@ const items = computed(() => {
 			status: download.status,
 			addedAt: download.added_at,
 			completedAt: download.completed_at,
-			modId: download.nexus_data?.mod_id
+			modId: download.nexus_data?.mod_id,
+			_item: download
 		};
 	});
 });
@@ -204,6 +207,36 @@ function itemProgressDisplay(item: { progress: number; status: DownloadStatus })
 			return 'Unknown';
 	}
 }
+
+const tableContextMenu = computed((): IContextMenu => {
+	return {
+		items: [
+			{
+				label: 'Open in NexusMods',
+				icon: 'mdi mdi-open-in-new',
+				condition: (item: Download) => item.nexus_data !== undefined,
+				onClick: (item: Download) => {
+					// TODO: Add support for other games
+					taurpc.open_file_or_url(`https://www.nexusmods.com/skyrimspecialedition/mods/${item.nexus_data!.mod_id}`);
+				},
+			},
+			{
+				label: 'Show in Folder',
+				icon: 'mdi mdi-folder-open-outline',
+				onClick: (item: Download) => {
+					taurpc.downloads.open_download_in_filemanager(item.file_name);
+				},
+			},
+			{
+				label: 'Delete Download',
+				icon: 'mdi mdi-delete-outline',
+				onClick: (item: Download) => {
+					taurpc.downloads.delete_downloads([item.file_name]);
+				},
+			},
+		]
+	}
+})
 
 // Add download dialog
 const addDownloadDialog = ref(false);

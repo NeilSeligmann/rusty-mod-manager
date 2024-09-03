@@ -81,13 +81,14 @@ export interface IContextMenu {
 export interface IContextMenuItem {
 	icon: string,
 	label: string,
+	condition?: (item: any) => boolean
 	onClick: (item: any) => void | Promise<void>
 }
 
 const modelItems = defineModel<any[]>({
 	required: true
 });
-const modelSortBy = defineModel<any[]>('sortBy');
+const modelSortBy = defineModel<any[] | undefined>('sortBy');
 
 const props = defineProps({
 	headers: {
@@ -248,19 +249,31 @@ function handleRowDoubleClick(event: MouseEvent, item: any, index: number) {
 	emits('onDoubleClick', item, index);
 }
 
-function handleRowRightClick(e: MouseEvent, item: any, index: number) {
+function handleRowRightClick(e: MouseEvent, _item: any, index: number) {
 	e.preventDefault();
 
-	selectItem(item, {
+	selectItem(_item, {
 		forced: true,
 		add: e.ctrlKey
 	});
+
+	// Use the current item._item if it exists
+	const item = _item?._item ?? _item;
 
 	if (typeof props.contextMenu === 'undefined') return;
 	if (props.contextMenu.items.length < 1) return;
 
 	const contextMenuItems: MenuItem[] = [];
 	for (const contextMenuItem of props.contextMenu.items) {
+		if (contextMenuItem.condition) {
+			console.log('Condition 1:', contextMenuItem.condition);
+			console.log('Condition 2:', item);
+			console.log('Condition 3:', contextMenuItem.condition(item));
+		}
+
+		// Check if menu item condition is met (if any)
+		if (contextMenuItem.condition && !contextMenuItem.condition(item)) continue;
+
 		contextMenuItems.push({
 			icon: contextMenuItem.icon,
 			label: contextMenuItem.label,

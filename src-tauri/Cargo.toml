@@ -48,6 +48,7 @@ esplugin = { git = "https://github.com/Ortham/esplugin.git", version = "6.1.0" }
 libloadorder = { git = "https://github.com/NeilSeligmann/libloadorder.git", version = "17.0.1" }
 unrar = "0.5.3"
 infer = "0.16.0"
+open = "5"
 # time = { version = "0.3.36", features = ["parsing", "formatting"] }
 
 [dev-dependencies]

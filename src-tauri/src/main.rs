@@ -94,6 +94,7 @@ trait Api {
 	// Utils
 	async fn open_folder(path: String) -> Result<(), String>;
 	async fn show_file_in_filemanager(path: String) -> Result<(), String>;
+	async fn open_file_or_url(path: String) -> Result<(), String>;
 }
 
 #[taurpc::resolvers]
@@ -155,6 +156,21 @@ impl Api for ApiImpl {
 
 	async fn show_file_in_filemanager(self, path: String) -> Result<(), String> {
 		return crate::controllers::file_controller::open_in_filemanager(PathBuf::from(path));
+	}
+
+	async fn open_file_or_url(self, path: String) -> Result<(), String> {
+		match open::that(path.clone()) {
+			Ok(_) => {}
+			Err(e) => {
+				return Err(format!(
+					"Failed to open file/url: {} -> {}",
+					path,
+					e.to_string()
+				));
+			}
+		}
+
+		return Ok(());
 	}
 }
 
@@ -787,6 +803,8 @@ impl ApiDownloads for ApiDownloadsStateImpl {
 			}
 		}
 
+		state.trigger_on_state_changed()?;
+
 		return Ok(());
 	}
 
@@ -1194,7 +1212,7 @@ async fn main() {
 
 		drop(state);
 
-		// Loop every second
+		// Loop every 500ms
 		loop {
 			let mut state = stateMutex.lock().await;
 
@@ -1239,10 +1257,11 @@ async fn main() {
 				}
 			}
 
+			// Drop the state mutex, so it can be used somewhere else
 			drop(state);
 
-			// Sleep for a second
-			tokio::time::sleep(Duration::from_secs(1)).await;
+			// Sleep for 500 ms
+			tokio::time::sleep(Duration::from_millis(500)).await;
 		}
 	});
 

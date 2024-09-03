@@ -11,6 +11,7 @@ use std::sync::{
 	atomic::{AtomicBool, Ordering},
 	Arc,
 };
+use tauri::api::file;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::Mutex;
@@ -177,7 +178,44 @@ impl Download {
 	}
 
 	pub fn delete_file(&self, downloads_path: PathBuf) -> Result<(), io::Error> {
-		return file_controller::delete_file_if_exists(downloads_path.join(&self.file_name));
+		// Delete download file
+		println!("Deleting download file: {}", self.file_name);
+		file_controller::delete_file_if_exists(downloads_path.join(&self.file_name))?;
+
+		// Delete part files
+		let entries = file_controller::list_entries_absolute_path(downloads_path)?;
+
+		for entry in entries {
+			if !entry.is_file() {
+				continue;
+			}
+
+			let file_name: &str = entry.file_name().unwrap().to_str().unwrap();
+
+			// Check if the current entry contains the download file name
+			if !file_name.contains(self.file_name.as_str()) {
+				continue;
+			}
+
+			// Check if the current entry is a part file
+			if entry.extension().is_none() {
+				continue;
+			}
+
+			let file_extension = entry.extension().unwrap().to_str().unwrap();
+
+			// Check if the current entry is a part file
+			if !file_extension.contains("part") {
+				continue;
+			}
+
+			println!("Deleting part file: {}", file_name);
+
+			// Delete the part file
+			file_controller::delete_file_if_exists(entry)?;
+		}
+
+		Ok(())
 	}
 }
 
@@ -435,6 +473,13 @@ impl Downloader {
 			part_file.read_to_end(&mut buffer).await?;
 			// Write the buffer to the output file
 			output_file.write_all(&buffer).await?;
+		}
+
+		// Remove the chunk files
+		// We remove them after merging all in case of an error
+		for i in 0..total_threads {
+			// Get the path of the chunk
+			let part_path = format!("{}.part{}", self.file_path, i);
 			// Remove the chunk file
 			tokio::fs::remove_file(part_path).await?;
 		}

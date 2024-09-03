@@ -499,8 +499,20 @@ pub fn open_folder(path: PathBuf) -> Result<(), String> {
 }
 
 pub fn delete_file_if_exists(path: PathBuf) -> std::io::Result<()> {
-	if path.exists() {
-		std::fs::remove_file(path)?;
+	println!("Deleting file: {}", path.display());
+
+	if path.is_file() {
+		match std::fs::remove_file(path) {
+			Ok(_) => (),
+			Err(err) => {
+				println!("Failed to delete file err kind: {}", err.kind());
+				if err.kind() == std::io::ErrorKind::NotFound {
+					return Ok(());
+				}
+
+				return Err(err);
+			}
+		}
 	}
 
 	Ok(())
